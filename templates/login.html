@@ -1,0 +1,53 @@
+{#
+login.html — Professional Login Screen
+#}
+{% extends 'base.html' %}
+
+{% block title %}Sign In - SentixAI{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="card auth-card">
+        <div class="auth-header">
+            <div class="auth-icon-bubble">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h2>Welcome Back</h2>
+            <p class="auth-subtitle">Access your sentiment analytics &amp; archival records</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('login') }}" class="auth-form">
+            <div class="form-group">
+                <label for="username"><i class="fa-regular fa-user"></i> Account Username</label>
+                <div class="input-with-icon">
+                    <input type="text" id="username" name="username" 
+                           placeholder="Enter your username" autocomplete="username" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password"><i class="fa-solid fa-key"></i> Password</label>
+                <div class="input-with-icon">
+                    <input type="password" id="password" name="password" 
+                           placeholder="Enter your security credentials" autocomplete="current-password" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full btn-lg">
+                <span>Sign In to Dashboard</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </form>
+
+        <div class="auth-footer-divider">
+            <span>New to SentixAI?</span>
+        </div>
+
+        <div class="auth-bottom-action">
+            <a href="{{ url_for('register') }}" class="btn btn-outline btn-full">
+                <i class="fa-solid fa-user-plus"></i> Create Academic Account
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

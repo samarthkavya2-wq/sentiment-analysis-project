@@ -1,0 +1,108 @@
+{#
+index.html — Professional Modern Homepage
+#}
+{% extends 'base.html' %}
+
+{% block title %}SentixAI - Political Sentiment Intelligence Platform{% endblock %}
+
+{% block content %}
+<!-- Modern Hero Section -->
+<section class="hero-section">
+    <div class="hero-badge">
+        <span class="pulse-dot"></span>
+        <span>Natural Language Processing &bull; MySQL Database</span>
+    </div>
+    
+    <h1 class="hero-title">
+        Filtering &amp; Classifying <span class="gradient-text">Political Sentiment</span> in Social Media
+    </h1>
+    
+    <p class="hero-subtitle">
+        An intelligent academic analytics platform designed to extract public opinion polarity, 
+        subjectivity metrics, and sentiment distribution across textual political discourse.
+    </p>
+
+    <div class="hero-actions">
+        {% if session.get('username') %}
+            <a href="{{ url_for('analyze') }}" class="btn btn-primary btn-lg">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Launch Sentiment Analyzer
+            </a>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-lg">
+                <i class="fa-solid fa-chart-column"></i> Analytics Dashboard
+            </a>
+        {% else %}
+            <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">
+                <i class="fa-solid fa-arrow-right"></i> Get Started Free
+            </a>
+            <a href="{{ url_for('login') }}" class="btn btn-secondary btn-lg">
+                <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In
+            </a>
+        {% endif %}
+    </div>
+
+    <!-- Quick Stats Metric Bar -->
+    <div class="hero-metrics">
+        <div class="metric-item">
+            <div class="metric-value">3-Class</div>
+            <div class="metric-label">Positive / Negative / Neutral</div>
+        </div>
+        <div class="metric-divider"></div>
+        <div class="metric-item">
+            <div class="metric-value">Real-time</div>
+            <div class="metric-label">NLP Scoring &amp; Polarity</div>
+        </div>
+        <div class="metric-divider"></div>
+        <div class="metric-item">
+            <div class="metric-value">MySQL</div>
+            <div class="metric-label">Structured Relational Storage</div>
+        </div>
+    </div>
+</section>
+
+<!-- System Architecture & Workflow Section -->
+<section class="features-section">
+    <div class="section-header">
+        <span class="section-tag">SYSTEM WORKFLOW</span>
+        <h2>How Political Sentiment is Filtered</h2>
+        <p>A multi-stage pipeline converting unstructured social commentary into actionable analytical intelligence.</p>
+    </div>
+
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="step-badge">01</div>
+            <div class="feature-icon-wrapper icon-blue">
+                <i class="fa-solid fa-keyboard"></i>
+            </div>
+            <h3>Text Ingestion</h3>
+            <p>Paste statements, tweets, debate remarks, or commentary into the input parser for immediate analysis.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="step-badge">02</div>
+            <div class="feature-icon-wrapper icon-purple">
+                <i class="fa-solid fa-filter"></i>
+            </div>
+            <h3>Pre-Processing</h3>
+            <p>Automated regex sanitization strips out @mentions, #hashtags, hyperlinks, and noise artifacts.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="step-badge">03</div>
+            <div class="feature-icon-wrapper icon-emerald">
+                <i class="fa-solid fa-brain"></i>
+            </div>
+            <h3>NLP Classification</h3>
+            <p>Lexical polarity scores (-1.0 to +1.0) and subjectivity indices evaluate tone, nuance, and intensity.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="step-badge">04</div>
+            <div class="feature-icon-wrapper icon-amber">
+                <i class="fa-solid fa-server"></i>
+            </div>
+            <h3>Relational Archival</h3>
+            <p>Structured storage in MySQL linked to user accounts for multi-dimensional search and visual analytics.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

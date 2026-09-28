@@ -1,0 +1,138 @@
+{#
+results.html — Historical Records & Filtering Interface
+#}
+{% extends 'base.html' %}
+
+{% block title %}Historical Ingestions - SentixAI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-badge"><i class="fa-solid fa-server"></i> MySQL Relational Archive</div>
+    <h1>Analysis History &amp; Filtering</h1>
+    <p>Search, isolate, and audit previous political sentiment inferences from the database.</p>
+</div>
+
+<!-- Modern Filter / Query Bar -->
+<div class="card filter-card">
+    <form method="GET" action="{{ url_for('results') }}" class="filter-form">
+        <div class="filter-group-field">
+            <label for="sentiment"><i class="fa-solid fa-filter"></i> Stance Classification</label>
+            <div class="select-wrapper">
+                <select name="sentiment" id="sentiment">
+                    <option value="">All Classifications</option>
+                    <option value="Positive" {% if current_filter == 'Positive' %}selected{% endif %}>Positive Stance</option>
+                    <option value="Negative" {% if current_filter == 'Negative' %}selected{% endif %}>Negative Stance</option>
+                    <option value="Neutral" {% if current_filter == 'Neutral' %}selected{% endif %}>Neutral Stance</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="filter-group-field flex-grow">
+            <label for="search"><i class="fa-solid fa-magnifying-glass"></i> Keyword Search</label>
+            <input type="text" name="search" id="search" 
+                   placeholder="Search by keywords (e.g., policy, economy, election)..."
+                   value="{{ search_query }}">
+        </div>
+
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary btn-md">
+                <i class="fa-solid fa-sliders"></i> Apply Filter
+            </button>
+            {% if current_filter or search_query %}
+                <a href="{{ url_for('results') }}" class="btn btn-secondary btn-md">
+                    <i class="fa-solid fa-xmark"></i> Reset
+                </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Active Query Summary -->
+<div class="results-meta-bar">
+    <div class="meta-count">
+        Found <strong>{{ posts | length }}</strong> record(s)
+        {% if current_filter %}
+            <span class="active-tag"><i class="fa-solid fa-tag"></i> Filter: {{ current_filter }}</span>
+        {% endif %}
+        {% if search_query %}
+            <span class="active-tag"><i class="fa-solid fa-quote-left"></i> Keyword: "{{ search_query }}"</span>
+        {% endif %}
+    </div>
+    <a href="{{ url_for('analyze') }}" class="btn btn-outline btn-sm">
+        <i class="fa-solid fa-plus"></i> New Ingestion
+    </a>
+</div>
+
+<!-- Structured Data Table -->
+{% if posts %}
+<div class="card table-card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">#</th>
+                    <th>Textual Statement</th>
+                    <th>Classified Stance</th>
+                    <th>Polarity</th>
+                    <th>Confidence</th>
+                    <th>Ingestion Date</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in posts %}
+                <tr>
+                    <td class="index-cell">{{ loop.index }}</td>
+                    <td class="text-cell">
+                        <div class="table-text-content" title="{{ post.text_content }}">{{ post.text_content }}</div>
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ post.sentiment | lower }}">
+                            {% if post.sentiment == 'Positive' %}<i class="fa-solid fa-thumbs-up"></i>
+                            {% elif post.sentiment == 'Negative' %}<i class="fa-solid fa-thumbs-down"></i>
+                            {% else %}<i class="fa-solid fa-scale-balanced"></i>{% endif %}
+                            {{ post.sentiment }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="score-mono {% if post.polarity > 0 %}text-success{% elif post.polarity < 0 %}text-danger{% else %}text-warning{% endif %}">
+                            {{ post.polarity }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="confidence-pill">{{ post.confidence }}%</div>
+                    </td>
+                    <td class="date-cell">
+                        <i class="fa-regular fa-calendar-days"></i> {{ post.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    </td>
+                    <td style="text-align: right;">
+                        <form method="POST" action="{{ url_for('delete_post', post_id=post.id) }}" 
+                              style="display:inline;"
+                              onsubmit="return confirm('Confirm deletion of this dataset record?');">
+                            <button type="submit" class="btn-icon-danger" title="Delete record">
+                                <i class="fa-regular fa-trash-can"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card empty-card">
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+        <h3>No Matching Records Found</h3>
+        {% if current_filter or search_query %}
+            <p>No posts match the applied query parameters. Reset filters to view all entries.</p>
+            <a href="{{ url_for('results') }}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-rotate-left"></i> Reset Filters</a>
+        {% else %}
+            <p>No historical records exist in your database instance yet.</p>
+            <a href="{{ url_for('analyze') }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-wand-magic-sparkles"></i> Perform First Analysis</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

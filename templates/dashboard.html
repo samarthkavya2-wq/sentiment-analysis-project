@@ -1,0 +1,200 @@
+{#
+dashboard.html — Executive Analytics Dashboard
+#}
+{% extends 'base.html' %}
+
+{% block title %}Analytics Dashboard - SentixAI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-badge"><i class="fa-solid fa-chart-line"></i> Relational Database Insights</div>
+    <h1>Sentiment Intelligence Dashboard</h1>
+    <p>Real-time statistical synthesis of classified textual datasets for <strong>{{ session['username'] }}</strong></p>
+</div>
+
+<!-- Modern Statistics Cards Grid -->
+<div class="stats-grid">
+    <div class="stat-card stat-total">
+        <div class="stat-card-inner">
+            <div class="stat-meta">
+                <span class="stat-title">Aggregate Ingested</span>
+                <span class="stat-number">{{ total }}</span>
+                <span class="stat-subtext">Total analyzed records</span>
+            </div>
+            <div class="stat-icon-wrapper icon-blue">
+                <i class="fa-solid fa-database"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card stat-positive">
+        <div class="stat-card-inner">
+            <div class="stat-meta">
+                <span class="stat-title">Positive Stance</span>
+                <span class="stat-number">{{ positive }}</span>
+                <span class="stat-subtext">
+                    {% if total > 0 %}{{ ((positive / total) * 100) | round(1) }}% of total{% else %}0%{% endif %}
+                </span>
+            </div>
+            <div class="stat-icon-wrapper icon-emerald">
+                <i class="fa-solid fa-arrow-trend-up"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card stat-negative">
+        <div class="stat-card-inner">
+            <div class="stat-meta">
+                <span class="stat-title">Negative Stance</span>
+                <span class="stat-number">{{ negative }}</span>
+                <span class="stat-subtext">
+                    {% if total > 0 %}{{ ((negative / total) * 100) | round(1) }}% of total{% else %}0%{% endif %}
+                </span>
+            </div>
+            <div class="stat-icon-wrapper icon-rose">
+                <i class="fa-solid fa-arrow-trend-down"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card stat-neutral">
+        <div class="stat-card-inner">
+            <div class="stat-meta">
+                <span class="stat-title">Neutral Stance</span>
+                <span class="stat-number">{{ neutral }}</span>
+                <span class="stat-subtext">
+                    {% if total > 0 %}{{ ((neutral / total) * 100) | round(1) }}% of total{% else %}0%{% endif %}
+                </span>
+            </div>
+            <div class="stat-icon-wrapper icon-amber">
+                <i class="fa-solid fa-minus"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard Grid (Chart + Recent Activity) -->
+<div class="dashboard-grid">
+    <!-- Visual Distribution Chart Card -->
+    <div class="card chart-card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-chart-pie"></i> Distribution Breakdown</h3>
+            <span class="hint-text">Proportional breakdown</span>
+        </div>
+        
+        {% if total > 0 %}
+        <div class="chart-box">
+            <canvas id="sentimentChart"></canvas>
+        </div>
+        <div class="chart-legend-custom">
+            <div class="legend-item"><span class="legend-dot dot-positive"></span> Positive ({{ positive }})</div>
+            <div class="legend-item"><span class="legend-dot dot-negative"></span> Negative ({{ negative }})</div>
+            <div class="legend-item"><span class="legend-dot dot-neutral"></span> Neutral ({{ neutral }})</div>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fa-solid fa-chart-simple"></i></div>
+            <h4>No Datasets Recorded</h4>
+            <p>Analyze statements to initialize distribution analytics.</p>
+            <a href="{{ url_for('analyze') }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus"></i> Analyze Text</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Analyses Card -->
+    <div class="card recent-card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-clock-rotate-left"></i> Recent Classifications</h3>
+            <a href="{{ url_for('results') }}" class="link-btn">View All History <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+
+        {% if recent_posts %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Content Excerpt</th>
+                        <th>Sentiment</th>
+                        <th>Confidence</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for post in recent_posts %}
+                    <tr>
+                        <td class="text-cell">
+                            <span class="cell-text" title="{{ post.text_content }}">{{ post.text_content[:75] }}{% if post.text_content|length > 75 %}...{% endif %}</span>
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ post.sentiment | lower }}">
+                                {% if post.sentiment == 'Positive' %}<i class="fa-solid fa-thumbs-up"></i>
+                                {% elif post.sentiment == 'Negative' %}<i class="fa-solid fa-thumbs-down"></i>
+                                {% else %}<i class="fa-solid fa-scale-balanced"></i>{% endif %}
+                                {{ post.sentiment }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="confidence-pill">{{ post.confidence }}%</div>
+                        </td>
+                        <td class="date-cell">
+                            <i class="fa-regular fa-calendar-days"></i> {{ post.created_at.strftime('%b %d, %H:%M') }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fa-solid fa-inbox"></i></div>
+            <h4>No Recent Activity</h4>
+            <p>No textual statements have been submitted by your account yet.</p>
+            <a href="{{ url_for('analyze') }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-wand-magic-sparkles"></i> Get Started</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    {% if total > 0 %}
+    var ctx = document.getElementById('sentimentChart').getContext('2d');
+    var sentimentChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Positive', 'Negative', 'Neutral'],
+            datasets: [{
+                data: [{{ positive }}, {{ negative }}, {{ neutral }}],
+                backgroundColor: [
+                    '#10b981',  // Emerald Green
+                    '#f43f5e',  // Modern Rose
+                    '#f59e0b'   // Amber Yellow
+                ],
+                borderColor: '#ffffff',
+                borderWidth: 4,
+                hoverOffset: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '72%',
+            plugins: {
+                legend: {
+                    display: false // We use our custom legend
+                },
+                tooltip: {
+                    backgroundColor: '#0f172a',
+                    titleFont: { family: 'Plus Jakarta Sans', size: 13 },
+                    bodyFont: { family: 'Plus Jakarta Sans', size: 12 },
+                    padding: 12,
+                    cornerRadius: 8
+                }
+            }
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}

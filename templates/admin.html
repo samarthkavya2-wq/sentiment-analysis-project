@@ -1,0 +1,209 @@
+{#
+admin.html — System Administration & Moderation Panel
+#}
+{% extends 'base.html' %}
+
+{% block title %}System Administration - SentixAI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-badge badge-admin"><i class="fa-solid fa-shield-halved"></i> Administrator Privileges</div>
+    <h1>System Administration &amp; Moderation</h1>
+    <p>Global oversight of registered user accounts, sentiment inferences, and moderation audit log.</p>
+</div>
+
+<!-- Admin KPI Metrics Grid -->
+<div class="stats-grid">
+    <div class="stat-card stat-total">
+        <div class="stat-card-inner">
+            <div class="stat-meta">
+                <span class="stat-title">Platform Users</span>
+                <span class="stat-number">{{ total_users }}</span>
+                <span class="stat-subtext">Registered accounts</span>
+            </div>
+            <div class="stat-icon-wrapper icon-blue">
+                <i class="fa-solid fa-users"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card stat-total">
+        <div class="stat-card-inner">
+            <div class="stat-meta">
+                <span class="stat-title">Total Ingestions</span>
+                <span class="stat-number">{{ total_posts }}</span>
+                <span class="stat-subtext">All submitted posts</span>
+            </div>
+            <div class="stat-icon-wrapper icon-purple">
+                <i class="fa-solid fa-database"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card stat-positive">
+        <div class="stat-card-inner">
+            <div class="stat-meta">
+                <span class="stat-title">Global Positive</span>
+                <span class="stat-number">{{ pos_count }}</span>
+                <span class="stat-subtext">
+                    {% if total_posts > 0 %}{{ ((pos_count / total_posts) * 100) | round(1) }}% of system{% else %}0%{% endif %}
+                </span>
+            </div>
+            <div class="stat-icon-wrapper icon-emerald">
+                <i class="fa-solid fa-thumbs-up"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card stat-negative">
+        <div class="stat-card-inner">
+            <div class="stat-meta">
+                <span class="stat-title">Global Negative</span>
+                <span class="stat-number">{{ neg_count }}</span>
+                <span class="stat-subtext">
+                    {% if total_posts > 0 %}{{ ((neg_count / total_posts) * 100) | round(1) }}% of system{% else %}0%{% endif %}
+                </span>
+            </div>
+            <div class="stat-icon-wrapper icon-rose">
+                <i class="fa-solid fa-thumbs-down"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 1: User Accounts Management -->
+<div class="card table-card" style="margin-bottom: 2.5rem;">
+    <div class="card-header" style="padding: 1.25rem 1.5rem; margin: 0;">
+        <h3><i class="fa-solid fa-users-gear"></i> Registered User Accounts</h3>
+        <span class="hint-text">Total: {{ all_users | length }} user(s)</span>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">UID</th>
+                    <th>Account Username</th>
+                    <th>Email Address</th>
+                    <th>Role / Authority</th>
+                    <th>Submissions</th>
+                    <th>Joined Timestamp</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in all_users %}
+                <tr>
+                    <td class="index-cell">#{{ u.id }}</td>
+                    <td>
+                        <strong>{{ u.username }}</strong>
+                        {% if u.id == session.get('user_id') %}
+                            <span class="badge" style="background: #eff6ff; color: #2563eb; margin-left: 0.35rem;">You</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ u.email }}</td>
+                    <td>
+                        {% if u.is_admin %}
+                            <span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a;">
+                                <i class="fa-solid fa-crown"></i> Admin
+                            </span>
+                        {% else %}
+                            <span class="badge" style="background: #f1f5f9; color: #475569;">
+                                <i class="fa-solid fa-user"></i> Standard User
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="confidence-pill">{{ u.post_count }} posts</span>
+                    </td>
+                    <td class="date-cell">
+                        <i class="fa-regular fa-calendar-days"></i> {{ u.created_at.strftime('%b %d, %Y') }}
+                    </td>
+                    <td style="text-align: right;">
+                        {% if u.id != session.get('user_id') %}
+                            <form method="POST" action="{{ url_for('admin_delete_user', user_id=u.id) }}"
+                                  style="display:inline;"
+                                  onsubmit="return confirm('Permanently remove user {{ u.username }} and all their associated records?');">
+                                <button type="submit" class="btn-icon-danger" title="Delete User">
+                                    <i class="fa-regular fa-trash-can"></i>
+                                </button>
+                            </form>
+                        {% else %}
+                            <span class="hint-text">Active</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Section 2: Global Content Moderation Log -->
+<div class="card table-card">
+    <div class="card-header" style="padding: 1.25rem 1.5rem; margin: 0;">
+        <h3><i class="fa-solid fa-shield-halved"></i> Global Posts Moderation Audit</h3>
+        <span class="hint-text">Auditing latest 50 entries across all users</span>
+    </div>
+    {% if all_posts %}
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">PID</th>
+                    <th>Author</th>
+                    <th>Textual Statement Excerpt</th>
+                    <th>Classified Stance</th>
+                    <th>Confidence</th>
+                    <th>Submitted</th>
+                    <th style="text-align: right;">Moderation</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in all_posts %}
+                <tr>
+                    <td class="index-cell">#{{ p.id }}</td>
+                    <td>
+                        <span class="user-chip" style="font-size: 0.78rem; padding: 0.2rem 0.6rem; background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0;">
+                            <i class="fa-regular fa-circle-user"></i> {{ p.username }}
+                        </span>
+                    </td>
+                    <td class="text-cell">
+                        <div class="table-text-content" title="{{ p.text_content }}">{{ p.text_content }}</div>
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ p.sentiment | lower }}">
+                            {% if p.sentiment == 'Positive' %}<i class="fa-solid fa-thumbs-up"></i>
+                            {% elif p.sentiment == 'Negative' %}<i class="fa-solid fa-thumbs-down"></i>
+                            {% else %}<i class="fa-solid fa-scale-balanced"></i>{% endif %}
+                            {{ p.sentiment }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="confidence-pill">{{ p.confidence }}%</div>
+                    </td>
+                    <td class="date-cell">
+                        <i class="fa-regular fa-clock"></i> {{ p.created_at.strftime('%b %d, %H:%M') }}
+                    </td>
+                    <td style="text-align: right;">
+                        <form method="POST" action="{{ url_for('admin_delete_post', post_id=p.id) }}"
+                              style="display:inline;"
+                              onsubmit="return confirm('Moderate and delete post #{{ p.id }}?');">
+                            <button type="submit" class="btn-icon-danger" title="Moderate/Delete">
+                                <i class="fa-regular fa-trash-can"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fa-solid fa-inbox"></i></div>
+        <h4>No Submissions Stored</h4>
+        <p>There are no posts currently recorded in the platform database.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

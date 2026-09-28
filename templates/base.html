@@ -1,0 +1,113 @@
+{#
+base.html — The Base Template
+
+This is the MASTER LAYOUT that all other pages inherit from.
+Instead of repeating the navbar, CSS links, and page structure in every HTML file,
+we write it ONCE here, and other pages just fill in the content.
+
+HOW IT WORKS:
+- This file has the navbar, header, footer, and CSS links
+- Other pages use 'extends base.html' to inherit this layout
+- They put their unique content inside 'block content...endblock'
+#}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- charset="UTF-8" allows the page to display all characters correctly -->
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- This makes the website look good on mobile phones too -->
+
+    <title>{% block title %}Sentiment Analysis{% endblock %}</title>
+    {# block title means: child pages can replace this title #}
+
+    <!-- Google Fonts & Font Awesome Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Link to our CSS file for styling -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <!-- ===== NAVIGATION BAR ===== -->
+    <header class="navbar-wrapper">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <a href="{{ url_for('index') }}">
+                    <span class="brand-icon"><i class="fa-solid fa-chart-pie"></i></span>
+                    <span class="brand-text">Sentix<span class="brand-accent">AI</span></span>
+                </a>
+            </div>
+            <div class="nav-links">
+                <a href="{{ url_for('index') }}" class="nav-link"><i class="fa-solid fa-house"></i> <span>Home</span></a>
+
+                {% if session.get('username') %}
+                    <a href="{{ url_for('dashboard') }}" class="nav-link"><i class="fa-solid fa-gauge-high"></i> <span>Dashboard</span></a>
+                    <a href="{{ url_for('analyze') }}" class="nav-link"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>Analyze</span></a>
+                    <a href="{{ url_for('results') }}" class="nav-link"><i class="fa-solid fa-database"></i> <span>History</span></a>
+                    {% if session.get('is_admin') %}
+                        <a href="{{ url_for('admin_dashboard') }}" class="nav-link nav-link-admin"><i class="fa-solid fa-shield-halved"></i> <span>Admin Panel</span></a>
+                    {% endif %}
+                    <div class="nav-user-menu">
+                        <span class="user-chip {% if session.get('is_admin') %}user-chip-admin{% endif %}">
+                            {% if session.get('is_admin') %}<i class="fa-solid fa-crown text-warning"></i>{% else %}<i class="fa-regular fa-circle-user"></i>{% endif %}
+                            {{ session['username'] }}
+                        </span>
+                        <a href="{{ url_for('logout') }}" class="btn-logout-nav" title="Logout"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+                    </div>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="nav-link"><i class="fa-solid fa-arrow-right-to-bracket"></i> <span>Login</span></a>
+                    <a href="{{ url_for('register') }}" class="btn-nav-primary"><i class="fa-solid fa-user-plus"></i> <span>Get Started</span></a>
+                {% endif %}
+            </div>
+        </nav>
+    </header>
+
+    <!-- ===== FLASH MESSAGES ===== -->
+    <!-- Flash messages are one-time notifications (success, error, info) -->
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- ===== MAIN CONTENT ===== -->
+        <!-- Each page puts its unique content here -->
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <span class="brand-icon"><i class="fa-solid fa-chart-pie"></i></span>
+                <span>Sentix<strong>AI</strong></span>
+            </div>
+            <p class="footer-tagline">Advanced Social Media & Political Sentiment Intelligence</p>
+            <div class="footer-meta">
+                <span><i class="fa-solid fa-shield-halved"></i> Academic Project Implementation</span>
+                <span>•</span>
+                <span>Powered by NLP & MySQL</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Link to our JavaScript file -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+    <!-- Extra scripts block — pages can add their own JavaScript here -->
+    {% block scripts %}
+    {% endblock %}
+
+</body>
+</html>

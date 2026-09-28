@@ -1,0 +1,153 @@
+{#
+analyze.html — Text Analysis & Intelligence Page
+#}
+{% extends 'base.html' %}
+
+{% block title %}Analyze Sentiment - SentixAI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-badge"><i class="fa-solid fa-wand-magic-sparkles"></i> NLP Sentiment Engine</div>
+    <h1>Text Sentiment Classification</h1>
+    <p>Submit political statements, social media posts, or news commentary to inspect polarity metrics.</p>
+</div>
+
+<div class="analyze-layout">
+    <!-- Main Input Form -->
+    <div class="card analyze-card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-pen-to-square"></i> Input Discourse Content</h3>
+            <span class="hint-text">Cleaned automatically via regex pipeline</span>
+        </div>
+        <form method="POST" action="{{ url_for('analyze') }}" class="analyze-form">
+            <div class="form-group">
+                <textarea id="text" name="text" rows="5" 
+                          placeholder="Paste political commentary, speech excerpt, or social media tweet here..."
+                          required>{{ request.form.get('text', '') }}</textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-md">
+                    <i class="fa-solid fa-magnifying-glass-chart"></i> Analyze &amp; Record Entry
+                </button>
+                <button type="button" class="btn btn-secondary btn-md" onclick="document.getElementById('text').value='';">
+                    <i class="fa-solid fa-eraser"></i> Clear
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Pre-built Dataset Samples -->
+    <div class="sample-section">
+        <div class="sample-title-row">
+            <h4><i class="fa-solid fa-vial"></i> Quick Demonstration Datasets</h4>
+            <span>Click any card to load sample text</span>
+        </div>
+        <div class="sample-grid">
+            <div class="sample-card sample-positive" onclick="copyText(this)">
+                <div class="sample-badge-bar">
+                    <span class="badge badge-positive"><i class="fa-solid fa-thumbs-up"></i> Positive Polarity</span>
+                    <i class="fa-solid fa-arrow-turn-up copy-icon"></i>
+                </div>
+                <p>The newly announced economic welfare initiative is exceptional. Thousands of low-income families will receive direct support and healthcare subsidies. A truly transformative policy!</p>
+            </div>
+            <div class="sample-card sample-negative" onclick="copyText(this)">
+                <div class="sample-badge-bar">
+                    <span class="badge badge-negative"><i class="fa-solid fa-thumbs-down"></i> Negative Polarity</span>
+                    <i class="fa-solid fa-arrow-turn-up copy-icon"></i>
+                </div>
+                <p>The state administration has utterly failed to regulate price spikes on essentials. Rampant inflation and broken campaign pledges have severely harmed citizens.</p>
+            </div>
+            <div class="sample-card sample-neutral" onclick="copyText(this)">
+                <div class="sample-badge-bar">
+                    <span class="badge badge-neutral"><i class="fa-solid fa-scale-balanced"></i> Neutral Polarity</span>
+                    <i class="fa-solid fa-arrow-turn-up copy-icon"></i>
+                </div>
+                <p>The legislative assembly convened at 10 AM to discuss proposed amendments to the trade bill. Delegates from multiple parties submitted written remarks.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analysis Results Display -->
+{% if result %}
+<div class="card result-card">
+    <div class="result-header">
+        <div>
+            <span class="section-tag">COMPUTED INFERENCE</span>
+            <h2>Sentiment Diagnostics</h2>
+        </div>
+        <!-- Sentiment Result Badge -->
+        <div class="sentiment-indicator indicator-{{ result.sentiment | lower }}">
+            <span class="indicator-icon">
+                {% if result.sentiment == 'Positive' %}
+                    <i class="fa-solid fa-circle-check"></i>
+                {% elif result.sentiment == 'Negative' %}
+                    <i class="fa-solid fa-circle-xmark"></i>
+                {% else %}
+                    <i class="fa-solid fa-circle-info"></i>
+                {% endif %}
+            </span>
+            <span class="indicator-label">{{ result.sentiment }}</span>
+        </div>
+    </div>
+
+    <!-- Sentiment Category Breakdown (Positive, Neutral, Negative) -->
+    <div class="metrics-grid">
+        <!-- Card 1: POSITIVE -->
+        <div class="metric-tile tile-category-pos">
+            <div class="tile-caption"><i class="fa-solid fa-thumbs-up"></i> Positive</div>
+            <div class="tile-val text-pos">{{ result.pos_pct }}%</div>
+            <div class="metric-bar-bg">
+                <div class="metric-bar-fill fill-pos" style="width: {{ result.pos_pct }}%;"></div>
+            </div>
+            <div class="tile-sub">Supportive or favorable tone</div>
+        </div>
+
+        <!-- Card 2: NEUTRAL -->
+        <div class="metric-tile tile-category-neu">
+            <div class="tile-caption"><i class="fa-solid fa-scale-balanced"></i> Neutral</div>
+            <div class="tile-val text-neu">{{ result.neu_pct }}%</div>
+            <div class="metric-bar-bg">
+                <div class="metric-bar-fill fill-neu" style="width: {{ result.neu_pct }}%;"></div>
+            </div>
+            <div class="tile-sub">Factual, balanced, or objective statement</div>
+        </div>
+
+        <!-- Card 3: NEGATIVE -->
+        <div class="metric-tile tile-category-neg">
+            <div class="tile-caption"><i class="fa-solid fa-thumbs-down"></i> Negative</div>
+            <div class="tile-val text-neg">{{ result.neg_pct }}%</div>
+            <div class="metric-bar-bg">
+                <div class="metric-bar-fill fill-neg" style="width: {{ result.neg_pct }}%;"></div>
+            </div>
+            <div class="tile-sub">Critical, harsh, or unfavorable tone</div>
+        </div>
+    </div>
+
+    <!-- Text Pipeline Diff -->
+    <div class="pipeline-comparison">
+        <div class="pipeline-box">
+            <h4><i class="fa-solid fa-file-lines"></i> Original Input Text</h4>
+            <div class="pipeline-content">{{ result.original_text }}</div>
+        </div>
+        <div class="pipeline-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+        <div class="pipeline-box">
+            <h4><i class="fa-solid fa-filter-circle-dollar"></i> Sanitized Text (NLP Parsed)</h4>
+            <div class="pipeline-content">{{ result.cleaned_text }}</div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function copyText(element) {
+        var text = element.querySelector('p').innerText;
+        var textarea = document.getElementById('text');
+        textarea.value = text;
+        textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        textarea.focus();
+    }
+</script>
+{% endblock %}
