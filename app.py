@@ -38,6 +38,7 @@ load_dotenv()  # Read .env file if it exists (for local development)
 from database import get_db_connection  # Our database connection function
 from sentiment import analyze_sentiment  # Our sentiment analysis function
 import os  # Used to generate a random secret key
+from flask_cors import CORS  # Enables Cross-Origin Resource Sharing for production API calls
 
 
 # ============================================
@@ -48,6 +49,13 @@ app = Flask(__name__)
 # Secret key is needed for sessions (login system) and flash messages
 # Think of it as a "password" that Flask uses internally to keep data secure
 app.secret_key = os.environ.get('SECRET_KEY', 'sentiment_analysis_secret_key_2024')
+
+# Enable CORS for API routes so external clients and frontends can connect
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+
+# Cookie security settings for production
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 
 # ============================================
@@ -453,18 +461,66 @@ def admin_delete_user(user_id):
     return redirect(url_for('admin_dashboard'))
 
 
+# ============================================
+# PRODUCTION HEALTH & API ENDPOINTS
+# ============================================
+
+@app.route('/health')
+def health():
+    """
+    Production health-check endpoint.
+    Used by cloud platforms (Render, Railway, etc.) and evaluators to verify
+    the application and database connection are working.
+    """
+    db_status = "connected"
+    try:
+        conn = get_db_connection()
+        if not conn.is_connected():
+            db_status = "disconnected"
+        conn.close()
+    except Exception as err:
+        db_status = f"error: {str(err)}"
+
+    status_code = 200 if db_status == "connected" else 503
+    return {
+        "status": "healthy" if db_status == "connected" else "unhealthy",
+        "database": db_status,
+        "app": "SentixAI - Political Sentiment Analysis"
+    }, status_code
+
+
+@app.route('/api/analyze', methods=['POST'])
+def api_analyze():
+    """
+    REST API endpoint for programmatic text sentiment analysis.
+    Accepts JSON: {"text": "political statement"}
+    Returns JSON: Full sentiment classification and distribution
+    """
+    data = request.get_json(silent=True) or {}
+    text = data.get('text', '').strip()
+
+    if not text:
+        return {"error": "Please provide a 'text' field in JSON payload."}, 400
+
+    result = analyze_sentiment(text)
+    return {
+        "success": True,
+        "result": result
+    }, 200
+
 
 # ============================================
 # STEP 4: Run the application
 # ============================================
 if __name__ == '__main__':
-    # debug=True means:
-    # 1. The server automatically restarts when you change code
-    # 2. If there's an error, you see detailed info in the browser
-    # IMPORTANT: Turn off debug=True before submitting! (Change to debug=False)
+    # Cloud environments set the PORT environment variable dynamically
+    port = int(os.environ.get('PORT', 5000))
+    # debug mode can be enabled with FLASK_DEBUG=1 in .env
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1')
+
     print("=" * 50)
     print("  Sentiment Analysis Web Application")
-    print("  Open your browser and go to:")
-    print("  http://localhost:5000")
+    print(f"  Starting server on http://0.0.0.0:{port}")
+    print(f"  Debug mode: {debug_mode}")
     print("=" * 50)
-    app.run(debug=False)
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)

@@ -1,37 +1,46 @@
 -- ============================================
 -- Database Setup for Sentiment Analysis Project
+-- Project: Filtering Political Sentiment in Social Media
 -- ============================================
 
 -- Step 1: Create the database
--- A database is like a folder that holds all your tables
 CREATE DATABASE IF NOT EXISTS sentiment_analysis;
 
--- Step 2: Tell MySQL to use this database
+-- Step 2: Use the database
 USE sentiment_analysis;
 
 -- Step 3: Create the 'users' table
--- This table stores information about registered users
 CREATE TABLE IF NOT EXISTS users (
-    id INT AUTO_INCREMENT PRIMARY KEY,       -- Unique ID for each user (auto-increments: 1, 2, 3...)
-    username VARCHAR(50) UNIQUE NOT NULL,     -- Username (max 50 characters, must be unique)
-    email VARCHAR(100) UNIQUE NOT NULL,       -- Email (max 100 characters, must be unique)
-    password VARCHAR(255) NOT NULL,           -- Hashed password (NOT plain text!)
-    is_admin TINYINT(1) DEFAULT 0,            -- 0 = Standard User, 1 = Administrator
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP  -- Date/time when user registered (auto-filled)
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    is_admin TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Step 4: Create the 'posts' table
--- This table stores all the text that users submit for analysis
 CREATE TABLE IF NOT EXISTS posts (
-    id INT AUTO_INCREMENT PRIMARY KEY,       -- Unique ID for each post
-    user_id INT NOT NULL,                    -- Which user submitted this post (links to users table)
-    text_content TEXT NOT NULL,              -- The actual text that was analyzed
-    sentiment VARCHAR(20) NOT NULL,          -- Result: 'Positive', 'Negative', or 'Neutral'
-    polarity FLOAT NOT NULL,                 -- Sentiment score: -1.0 (very negative) to +1.0 (very positive)
-    subjectivity FLOAT NOT NULL,             -- How subjective the text is: 0.0 (fact) to 1.0 (opinion)
-    confidence FLOAT NOT NULL,               -- How confident the analysis is (percentage)
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- When the analysis was done
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    text_content TEXT NOT NULL,
+    sentiment VARCHAR(20) NOT NULL,
+    polarity FLOAT NOT NULL,
+    subjectivity FLOAT NOT NULL,
+    confidence FLOAT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    -- FOREIGN KEY means: user_id must match an id in the users table
-    -- ON DELETE CASCADE means: if a user is deleted, their posts are also deleted
 );
+
+-- Step 5: Seed default Administrator Account
+-- Username: admin
+-- Password: admin123
+INSERT INTO users (id, username, email, password, is_admin)
+VALUES (
+    7,
+    'admin',
+    'admin@sentix.ai',
+    'scrypt:32768:8:1$DwkOn76BkPQcWDYT$fa3dd32db66a23a5604e72b09938f215d42edcbd28def9dc739c9062d41589d18ec38976e501c8ad025e1a4d28cee7c10b96da323c9c7c138f963c9d0cdd2ed4',
+    1
+)
+ON DUPLICATE KEY UPDATE is_admin=1;
