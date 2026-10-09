@@ -35,7 +35,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv  # Loads environment variables from .env file
 load_dotenv()  # Read .env file if it exists (for local development)
 
-from database import get_db_connection  # Our database connection function
+from database import get_db_connection, init_db  # Our database connection functions
 from sentiment import analyze_sentiment  # Our sentiment analysis function
 import os  # Used to generate a random secret key
 from flask_cors import CORS  # Enables Cross-Origin Resource Sharing for production API calls
@@ -56,6 +56,10 @@ CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 # Cookie security settings for production
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+# Initialise SQLite database (creates tables + seeds admin) on every startup
+# This runs whether the app is started via `python app.py` or `gunicorn app:app`
+init_db()
 
 
 # ============================================
@@ -107,7 +111,7 @@ def register():
         cursor = conn.cursor()
         try:
             cursor.execute(
-                'INSERT INTO users (username, email, password) VALUES (%s, %s, %s)',
+                'INSERT INTO users (username, email, password) VALUES (%s, ?, ?)',
                 (username, email, hashed_password)
             )
             conn.commit()  # Save the changes to the database
@@ -145,8 +149,8 @@ def login():
         
         # Look up the user in the database
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)  # dictionary=True returns results as dicts
-        cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
+        cursor = conn.cursor()  # dictionary=True returns results as dicts
+        cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
         user = cursor.fetchone()  # Get one result (or None if not found)
         cursor.close()
         conn.close()
@@ -213,7 +217,7 @@ def analyze():
             cursor.execute(
                 '''INSERT INTO posts 
                    (user_id, text_content, sentiment, polarity, subjectivity, confidence) 
-                   VALUES (%s, %s, %s, %s, %s, %s)''',
+                   VALUES (%s, ?, ?, ?, ?, ?)''',
                 (session['user_id'], text, result['sentiment'], 
                  result['polarity'], result['subjectivity'], result['confidence'])
             )
@@ -241,7 +245,7 @@ def results():
         return redirect(url_for('login'))
     
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     
     # Get filter and search from URL parameters
     # Example URL: /results?sentiment=Positive&search=government
@@ -249,15 +253,15 @@ def results():
     search_query = request.args.get('search', '')
     
     # Build the SQL query dynamically based on filters
-    query = 'SELECT * FROM posts WHERE user_id = %s'
+    query = 'SELECT * FROM posts WHERE user_id = ?'
     params = [session['user_id']]
     
     if sentiment_filter:
-        query += ' AND sentiment = %s'
+        query += ' AND sentiment = ?'
         params.append(sentiment_filter)
     
     if search_query:
-        query += ' AND text_content LIKE %s'
+        query += ' AND text_content LIKE ?'
         params.append(f'%{search_query}%')  # % means "anything before/after"
     
     query += ' ORDER BY created_at DESC'  # Newest first
@@ -288,17 +292,17 @@ def dashboard():
         return redirect(url_for('login'))
     
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     
     # Get total number of posts
-    cursor.execute('SELECT COUNT(*) as total FROM posts WHERE user_id = %s',
+    cursor.execute('SELECT COUNT(*) as total FROM posts WHERE user_id = ?',
                    (session['user_id'],))
     total = cursor.fetchone()['total']
     
     # Get count of each sentiment type using GROUP BY
     # GROUP BY groups rows with the same sentiment together and counts them
     cursor.execute(
-        'SELECT sentiment, COUNT(*) as count FROM posts WHERE user_id = %s GROUP BY sentiment',
+        'SELECT sentiment, COUNT(*) as count FROM posts WHERE user_id = ? GROUP BY sentiment',
         (session['user_id'],)
     )
     sentiment_counts = {row['sentiment']: row['count'] for row in cursor.fetchall()}
@@ -309,7 +313,7 @@ def dashboard():
     
     # Get 5 most recent posts
     cursor.execute(
-        'SELECT * FROM posts WHERE user_id = %s ORDER BY created_at DESC LIMIT 5',
+        'SELECT * FROM posts WHERE user_id = ? ORDER BY created_at DESC LIMIT 5',
         (session['user_id'],)
     )
     recent_posts = cursor.fetchall()
@@ -342,7 +346,7 @@ def delete_post(post_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     # Delete only if BOTH the post_id AND user_id match (security!)
-    cursor.execute('DELETE FROM posts WHERE id = %s AND user_id = %s',
+    cursor.execute('DELETE FROM posts WHERE id = ? AND user_id = ?',
                    (post_id, session['user_id']))
     conn.commit()
     cursor.close()
@@ -370,7 +374,7 @@ def admin_dashboard():
         return redirect(url_for('login'))
     
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     
     # 1. Total registered accounts
     cursor.execute('SELECT COUNT(*) AS total_users FROM users')
@@ -429,7 +433,7 @@ def admin_delete_post(post_id):
         
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM posts WHERE id = %s', (post_id,))
+    cursor.execute('DELETE FROM posts WHERE id = ?', (post_id,))
     conn.commit()
     cursor.close()
     conn.close()
@@ -452,7 +456,7 @@ def admin_delete_user(user_id):
         
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM users WHERE id = %s', (user_id,))
+    cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
     conn.commit()
     cursor.close()
     conn.close()
@@ -513,6 +517,9 @@ def api_analyze():
 # STEP 4: Run the application
 # ============================================
 if __name__ == '__main__':
+    # Initialise the SQLite database (creates tables + admin account if needed)
+    init_db()
+
     # Cloud environments set the PORT environment variable dynamically
     port = int(os.environ.get('PORT', 5000))
     # debug mode can be enabled with FLASK_DEBUG=1 in .env

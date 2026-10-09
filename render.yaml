@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: sentixai
+    runtime: python
+    buildCommand: "pip install -r requirements.txt && python -c 'import nltk; nltk.download(\"punkt\"); nltk.download(\"punkt_tab\"); nltk.download(\"averaged_perceptron_tagger\"); nltk.download(\"averaged_perceptron_tagger_eng\"); nltk.download(\"brown\"); nltk.download(\"wordnet\")'"
+    startCommand: "gunicorn app:app"
+    plan: free
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_DEBUG
+        value: "False"
+      - key: DB_PATH
+        value: "/opt/render/project/src/sentixai.db"
+    disk:
+      name: sentixai-db
+      mountPath: /opt/render/project/src
+      sizeGB: 1

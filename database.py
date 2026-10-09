@@ -1,71 +1,85 @@
 """
-database.py — Database Connection Module
+database.py — Database Connection Module (SQLite version)
 
-This file handles the connection between Python and MySQL.
-Think of it as the "bridge" between your website and your database.
+Switched from MySQL to SQLite for free hosting on Render.com.
+SQLite stores data in a single file (sentixai.db) — no server needed.
 
-In production (PythonAnywhere, Render, Railway, etc.), the database 
-connection details come from environment variables. This keeps passwords safe.
-Locally, it reads from the .env file via python-dotenv.
+The database file is automatically created on first run.
 """
 
 import os
-import urllib.parse
-import mysql.connector
+import sqlite3
 from dotenv import load_dotenv
 
 load_dotenv()
 
+# Path to the SQLite database file
+# On Render: stored in /opt/render/project/src/sentixai.db (persistent disk)
+# Locally:   stored in the project folder
+DB_PATH = os.environ.get('DB_PATH', os.path.join(os.path.dirname(__file__), 'sentixai.db'))
+
 
 def get_db_connection():
     """
-    Create and return a connection to the MySQL database.
-    
-    Supports:
-    1. Direct DATABASE_URL (common on cloud hosts like Render/Railway):
-       mysql://username:password@hostname:port/database_name
-    2. Individual environment variables:
-       - DB_HOST (default: localhost)
-       - DB_PORT (default: 3306)
-       - DB_USER (default: root)
-       - DB_PASSWORD (default: applet)
-       - DB_NAME (default: sentiment_analysis)
-    3. Optional SSL configuration for cloud databases (Aiven, TiDB, etc.)
-    """
-    db_url = os.environ.get('DATABASE_URL')
-    
-    if db_url:
-        parsed = urllib.parse.urlparse(db_url)
-        conn_config = {
-            'host': parsed.hostname or 'localhost',
-            'port': parsed.port or 3306,
-            'user': parsed.username or 'root',
-            'password': urllib.parse.unquote(parsed.password or ''),
-            'database': (parsed.path.lstrip('/') if parsed.path else 'sentiment_analysis')
-        }
-    else:
-        conn_config = {
-            'host': os.environ.get('DB_HOST', 'localhost'),
-            'port': int(os.environ.get('DB_PORT', 3306)),
-            'user': os.environ.get('DB_USER', 'root'),
-            'password': os.environ.get('DB_PASSWORD', 'applet'),
-            'database': os.environ.get('DB_NAME', 'sentiment_analysis')
-        }
-        
-    # SSL support for cloud databases (e.g. Aiven, TiDB Cloud)
-    ssl_ca = os.environ.get('DB_SSL_CA')
-    if ssl_ca:
-        conn_config['ssl_ca'] = ssl_ca
-    elif os.environ.get('DB_SSL_MODE') == 'REQUIRED':
-        conn_config['ssl_disabled'] = False
-        
-    # Set connection timeout to 10 seconds to avoid hanging on network delays
-    conn_config['connection_timeout'] = int(os.environ.get('DB_TIMEOUT', 10))
+    Create and return a connection to the SQLite database.
 
-    try:
-        connection = mysql.connector.connect(**conn_config)
-        return connection
-    except mysql.connector.Error as err:
-        print(f"[DATABASE ERROR] Could not connect to MySQL: {err}")
-        print(f"[DATABASE CONFIG] Host: {conn_config.get('host')}:{conn_config.get('port')}, User: {conn_config.get('user')}, DB: {conn_config.get('database')}")
-        raise err
+    Returns rows as dictionaries (same behaviour as MySQL's dictionary=True cursor).
+    The database file is created automatically if it does not exist.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row   # rows behave like dicts: row['column_name']
+    conn.execute('PRAGMA journal_mode=WAL')   # better concurrent read performance
+    conn.execute('PRAGMA foreign_keys = ON')  # enforce ON DELETE CASCADE
+    return conn
+
+
+def init_db():
+    """
+    Create tables and seed the admin account if they don't already exist.
+    Called automatically when the Flask app starts.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Create users table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            username  TEXT UNIQUE NOT NULL,
+            email     TEXT UNIQUE NOT NULL,
+            password  TEXT NOT NULL,
+            is_admin  INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    ''')
+
+    # Create posts table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS posts (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id      INTEGER NOT NULL,
+            text_content TEXT NOT NULL,
+            sentiment    TEXT NOT NULL,
+            polarity     REAL NOT NULL,
+            subjectivity REAL NOT NULL,
+            confidence   REAL NOT NULL,
+            created_at   TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    ''')
+
+    # Seed default admin account (password: admin123)
+    cursor.execute('''
+        INSERT OR IGNORE INTO users (id, username, email, password, is_admin)
+        VALUES (
+            7,
+            'admin',
+            'admin@sentix.ai',
+            'scrypt:32768:8:1$DwkOn76BkPQcWDYT$fa3dd32db66a23a5604e72b09938f215d42edcbd28def9dc739c9062d41589d18ec38976e501c8ad025e1a4d28cee7c10b96da323c9c7c138f963c9d0cdd2ed4',
+            1
+        )
+    ''')
+
+    conn.commit()
+    conn.close()
+    print(f"[DATABASE] SQLite database ready at: {DB_PATH}")
