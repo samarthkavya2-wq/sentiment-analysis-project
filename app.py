@@ -134,7 +134,7 @@ def register():
         cursor = conn.cursor()
         try:
             cursor.execute(
-                'INSERT INTO users (username, email, password) VALUES (%s, ?, ?)',
+                'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
                 (username, email, hashed_password)
             )
             conn.commit()  # Save the changes to the database
@@ -183,7 +183,7 @@ def login():
             # Login successful! Store user info in session
             session['user_id'] = user['id']
             session['username'] = user['username']
-            session['is_admin'] = bool(user.get('is_admin', 0))
+            session['is_admin'] = bool(user['is_admin'] if user['is_admin'] is not None else 0)
             flash('Login successful! Welcome, ' + user['username'] + '!', 'success')
             if session['is_admin']:
                 return redirect(url_for('admin_dashboard'))
@@ -240,7 +240,7 @@ def analyze():
             cursor.execute(
                 '''INSERT INTO posts 
                    (user_id, text_content, sentiment, polarity, subjectivity, confidence) 
-                   VALUES (%s, ?, ?, ?, ?, ?)''',
+                   VALUES (?, ?, ?, ?, ?, ?)''',
                 (session['user_id'], text, result['sentiment'], 
                  result['polarity'], result['subjectivity'], result['confidence'])
             )
@@ -502,8 +502,7 @@ def health():
     db_status = "connected"
     try:
         conn = get_db_connection()
-        if not conn.is_connected():
-            db_status = "disconnected"
+        conn.execute('SELECT 1')   # lightweight check that the DB file is readable
         conn.close()
     except Exception as err:
         db_status = f"error: {str(err)}"

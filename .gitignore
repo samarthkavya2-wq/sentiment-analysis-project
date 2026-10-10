@@ -17,3 +17,7 @@ venv/
 # OS files
 .DS_Store
 Thumbs.db
+
+# SQLite database (never push — Render has its own persistent copy)
+*.db
+*.sqlite
