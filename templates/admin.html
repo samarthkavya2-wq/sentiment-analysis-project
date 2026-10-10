@@ -116,7 +116,7 @@ admin.html — System Administration & Moderation Panel
                         <span class="confidence-pill">{{ u.post_count }} posts</span>
                     </td>
                     <td class="date-cell">
-                        <i class="fa-regular fa-calendar-days"></i> {{ u.created_at.strftime('%b %d, %Y') }}
+                        <i class="fa-regular fa-calendar-days"></i> {{ u.created_at | fmtdate('%b %d, %Y') }}
                     </td>
                     <td style="text-align: right;">
                         {% if u.id != session.get('user_id') %}
@@ -182,7 +182,7 @@ admin.html — System Administration & Moderation Panel
                         <div class="confidence-pill">{{ p.confidence }}%</div>
                     </td>
                     <td class="date-cell">
-                        <i class="fa-regular fa-clock"></i> {{ p.created_at.strftime('%b %d, %H:%M') }}
+                        <i class="fa-regular fa-clock"></i> {{ p.created_at | fmtdate('%b %d, %H:%M') }}
                     </td>
                     <td style="text-align: right;">
                         <form method="POST" action="{{ url_for('admin_delete_post', post_id=p.id) }}"

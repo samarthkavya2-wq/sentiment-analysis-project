@@ -103,7 +103,7 @@ results.html — Historical Records & Filtering Interface
                         <div class="confidence-pill">{{ post.confidence }}%</div>
                     </td>
                     <td class="date-cell">
-                        <i class="fa-regular fa-calendar-days"></i> {{ post.created_at.strftime('%Y-%m-%d %H:%M') }}
+                        <i class="fa-regular fa-calendar-days"></i> {{ post.created_at | fmtdate('%Y-%m-%d %H:%M') }}
                     </td>
                     <td style="text-align: right;">
                         <form method="POST" action="{{ url_for('delete_post', post_id=post.id) }}" 

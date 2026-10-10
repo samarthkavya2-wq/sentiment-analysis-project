@@ -137,7 +137,7 @@ dashboard.html — Executive Analytics Dashboard
                             <div class="confidence-pill">{{ post.confidence }}%</div>
                         </td>
                         <td class="date-cell">
-                            <i class="fa-regular fa-calendar-days"></i> {{ post.created_at.strftime('%b %d, %H:%M') }}
+                            <i class="fa-regular fa-calendar-days"></i> {{ post.created_at | fmtdate('%b %d, %H:%M') }}
                         </td>
                     </tr>
                     {% endfor %}

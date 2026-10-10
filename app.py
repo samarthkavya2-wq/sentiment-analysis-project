@@ -61,6 +61,29 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 # This runs whether the app is started via `python app.py` or `gunicorn app:app`
 init_db()
 
+# ── Jinja2 date filter ───────────────────────────────────────────────────────
+# SQLite stores dates as strings (e.g. "2026-09-07 13:18:52").
+# MySQL returned proper datetime objects. This filter handles BOTH so templates
+# never crash with "'str' has no attribute 'strftime'".
+from datetime import datetime as _dt
+
+@app.template_filter('fmtdate')
+def fmtdate(value, fmt='%b %d, %Y'):
+    """Format a date value (string or datetime) using the given format string."""
+    if value is None:
+        return ''
+    if isinstance(value, str):
+        # Try common SQLite date formats
+        for pattern in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d'):
+            try:
+                value = _dt.strptime(value, pattern)
+                break
+            except ValueError:
+                continue
+        else:
+            return value   # return as-is if parsing fails
+    return value.strftime(fmt)
+
 
 # ============================================
 # STEP 3: Define Routes (Pages)
